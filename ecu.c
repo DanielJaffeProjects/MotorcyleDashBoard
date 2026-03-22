@@ -6,17 +6,17 @@ void *ecu_thread(void *arg) {
     while (1) {
     
         //If the engine is off, force the rpm zone into IDLE
-       if (global_state.engine_on == 0 || global_state.rpm <= 0) {
+       if (global_state.engine_on == 0 || global_state.rpm == 0) {
             strcpy(global_state.rpm_zone, "IDLE");
        } 
-       else if (global_state.rpm < 3000) {
+       else if (global_state.rpm >= 1100 && global_state.rpm < 1300) {
             strcpy(global_state.rpm_zone, "IDLE");
        }
        //Zones for when the engine is turned on 
-       else if (global_state.rpm < 8000) {
+       else if (global_state.rpm >= 1300 && global_state.rpm < 8000) {
             strcpy(global_state.rpm_zone, "NORMAL");
        }
-       else if (global_state.rpm < 14500) {
+       else if (global_state.rpm >= 8000 && global_state.rpm < 14500) {
             strcpy(global_state.rpm_zone, "HIGH");
        }
        else {
@@ -24,13 +24,13 @@ void *ecu_thread(void *arg) {
        }
 
        //Temperature zone logic 
-       if (global_state.engine_temp < 60.0) {
+       if (global_state.engine_temp < 60.0f) {
             strcpy(global_state.temp_zone, "COLD");
        } 
-       else if (global_state.engine_temp < 95.0) {
+       else if (global_state.engine_temp < 95.0f) {
             strcpy(global_state.temp_zone, "NORMAL");
        } 
-       else if (global_state.engine_temp < 105.0) {
+       else if (global_state.engine_temp < 105.0f) {
             strcpy(global_state.temp_zone, "HOT");
        } 
        else {
@@ -44,6 +44,11 @@ void *ecu_thread(void *arg) {
        }
        else {
         strcpy(global_state.fuel_status, "OK");
+       }
+
+       if (global_state.engine_on == 0) {
+        global_state.rpm = 0;
+        global_state.speed = 0.0f;
        }
 
        usleep(100000);
