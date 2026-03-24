@@ -20,14 +20,16 @@ void *event_logger_thread(void *arg)
 {
 
     // Keeping track of the previous events
-    char prev_rpm_zone[16] = "";
-    char prev_temp_zone[16] = "";
-    char prev_hybrid_mode[32] = "";
-    int prev_engine_on = -1;
+    char prev_rpm_zone[16] = "IDLE";
+    char prev_temp_zone[16] = "COLD";
+    char prev_hybrid_mode[32] = "IDLE";
+    int prev_engine_on = 1;
     int fuel_warned = 0;
     int battery_warned = 0;
     int overheat_warned = 0;
     char msg[128];
+
+    sleep(1);
 
     while (1)
     {
@@ -62,12 +64,12 @@ void *event_logger_thread(void *arg)
         }
 
         // Battery level reaching a critical level
-        if (!battery_warned && global_state.battery_level < 15.0f)
+        if (!battery_warned && global_state.battery_level < 21.0f)
         {
-            log_event("WARNING: Battery critical (<15%)");
+            log_event("WARNING: Battery critical (<=20%)");
             battery_warned = 1;
         }
-        if (battery_warned && global_state.battery_level >= 15.0f)
+        if (battery_warned && global_state.battery_level >= 21.0f)
         {
             battery_warned = 0;
         }
