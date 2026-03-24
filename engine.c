@@ -58,16 +58,16 @@ void *engine_thread(void *arg) {
 
     while (1) {
         // if engine is 1 then it is on else it is off
-        if (global_state.engine_on == 1) {
-            printf("ENGINE: ON \n");
-        }
-        else {
-            printf("ENGINE: OFF \n");
-        }
+        // if (global_state.engine_on == 1) {
+        //     printf("ENGINE: ON \n");
+        // }
+        // else {
+        //     printf("ENGINE: OFF \n");
+        // }
         update_RPM();
-        printf("RPM: %d\n", global_state.rpm);
+        // printf("RPM: %d\n", global_state.rpm);
         update_Temp();
-        printf("Temp: %f\n", global_state.engine_temp);
+        // printf("Temp: %f\n", global_state.engine_temp);
 
         sleep(1);
 

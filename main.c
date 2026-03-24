@@ -1,6 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "state.h"
 #include <pthread.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>
 
 SystemState global_state;
 
@@ -12,14 +16,61 @@ void *hybrid_thread(void *arg);
 void *event_logger_thread(void *arg);
 void *dashboard_thread(void *arg);
 
-int main(void) {
+void init_state()
+{
+    srand(time(NULL));
+
+    // Engine
+    global_state.rpm = 0;
+    global_state.engine_temp = 20.0f;
+    global_state.engine_on = 1;
+
+    // Motion
+    global_state.speed = 50.0f;
+    global_state.total_distance = 1000.0f + (rand() % 50000);
+    global_state.trip_distance = 0.0f;
+
+    // Fuel
+    global_state.fuel_level = FUEL_MAX;
+
+    // ECU derived
+    strcpy(global_state.rpm_zone, "IDLE");
+    strcpy(global_state.temp_zone, "COLD");
+    strcpy(global_state.fuel_status, "OK");
+
+    // Hybrid
+    global_state.battery_level = 80.0f;
+    global_state.assist_active = 0;
+    global_state.charging_active = 0;
+    strcpy(global_state.hybrid_mode, "IDLE");
+
+    // Signals & Lights
+    global_state.left_signal = 0;
+    global_state.right_signal = 0;
+    global_state.hazard = 0;
+    global_state.headlight = 1;
+
+    // Timers
+    global_state.total_elapsed_sec = rand() % 100000;
+    global_state.current_elapsed_sec = 0;
+
+    // Event log
+    global_state.event_count = 0;
+    memset(global_state.event_log, 0, sizeof(global_state.event_log));
+}
+
+int main(void)
+{
+
+    init_state();
+
     pthread_t t_engine;
     pthread_t t_motion;
     pthread_t t_fuel;
     pthread_t t_ecu;
     pthread_t t_hybrid;
     pthread_t t_event_logger;
-    pthread_t t_dashboard;  
+    pthread_t t_dashboard;
 
     pthread_create(&t_engine, NULL, engine_thread, NULL);
     pthread_create(&t_motion, NULL, motion_thread, NULL);
@@ -36,8 +87,6 @@ int main(void) {
     pthread_join(t_hybrid, NULL);
     pthread_join(t_event_logger, NULL);
     pthread_join(t_dashboard, NULL);
-
-
 
     printf("Hahaha");
     return 0;
