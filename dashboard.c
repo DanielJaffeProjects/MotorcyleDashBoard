@@ -1,143 +1,274 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/ioctl.h>
+#endif
+
 #include "state.h"
 
-// Formating Time
-void format_time(int total_seconds, char *buf)
+#define MIN_WIDTH 60
+#define MAX_WIDTH 140
+
+// Getting the width of the terminal. This part is created with the help of AI
+int get_terminal_width()
 {
-    int h = total_seconds / 3600;
-    int m = (total_seconds % 3600) / 60;
-    int s = total_seconds % 60;
-    sprintf(buf, "%02d:%02d:%02d", h, m, s);
+#ifdef _WIN32
+       CONSOLE_SCREEN_BUFFER_INFO csbi;
+       int columns = 80;
+
+       if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi))
+       {
+              columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+       }
+       return columns;
+#else
+       struct winsize w;
+
+       if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1 || w.ws_col == 0)
+              return 80;
+
+       return w.ws_col;
+#endif
 }
 
-// Formating Bars
+void format_time(int total_seconds, char *buf)
+{
+       int h = total_seconds / 3600;
+       int m = (total_seconds % 3600) / 60;
+       int s = total_seconds % 60;
+       sprintf(buf, "%02d:%02d:%02d", h, m, s);
+}
+
 void format_bar(float value, float max, int width, char *buf)
 {
-    int filled = (int)((value / max) * width);
-    if (filled > width)
-        filled = width;
-    if (filled < 0)
-        filled = 0;
-    buf[0] = '[';
-    for (int i = 0; i < width; i++)
-        buf[i + 1] = (i < filled) ? '=' : '-';
-    buf[width + 1] = ']';
-    buf[width + 2] = '\0';
+       int filled = (int)((value / max) * width);
+
+       if (filled > width)
+              filled = width;
+       if (filled < 0)
+              filled = 0;
+
+       buf[0] = '[';
+
+       for (int i = 0; i < width; i++)
+              buf[i + 1] = (i < filled) ? '=' : '-';
+
+       buf[width + 1] = ']';
+       buf[width + 2] = '\0';
+}
+
+void print_top(int width)
+{
+       printf("+");
+       for (int i = 0; i < width - 2; i++)
+              printf("-");
+       printf("+\n");
+}
+
+void print_mid(int width)
+{
+       printf("+");
+       for (int i = 0; i < width - 2; i++)
+              printf("-");
+       printf("+\n");
+}
+
+void print_bottom(int width)
+{
+       printf("+");
+       for (int i = 0; i < width - 2; i++)
+              printf("-");
+       printf("+\n");
+}
+
+void print_row(int width, const char *text)
+{
+       int content_width = width - 4;
+       printf("| %-*.*s |\n", content_width, content_width, text);
 }
 
 // Printing the Actual Dashboard
 void print_dashboard(void)
 {
-    char total_time[9], current_time[9];
-    char fuel_bar[23], battery_bar[23], rpm_bar[23], speed_bar[23];
+       int width = get_terminal_width();
 
-    format_time(global_state.total_elapsed_sec, total_time);
-    format_time(global_state.current_elapsed_sec, current_time);
-    format_bar((float)global_state.rpm, (float)RPM_MAX, 20, rpm_bar);
-    format_bar(global_state.speed, (float)SPEED_MAX, 20, speed_bar);
-    format_bar(global_state.fuel_level, FUEL_MAX, 20, fuel_bar);
-    format_bar(global_state.battery_level, 100.0f, 20, battery_bar);
+       if (width < MIN_WIDTH)
+       {
+              width = MIN_WIDTH;
+       }
+       if (width > MAX_WIDTH)
+       {
+              width = MAX_WIDTH;
+       }
 
-    printf("+----------------------------------------------+\n");
-    printf("|         MOTORCYCLE  DASHBOARD  OS            |\n");
-    printf("+----------------------------------------------+\n");
+       int content_width = width - 4;
 
-    // Engine
-    printf("|  ENGINE  : %-3s                               |\n",
-           global_state.engine_on ? "ON " : "OFF");
-    printf("|  RPM     : %-6d %s          |\n",
-           global_state.rpm, rpm_bar);
-    printf("|  ZONE    : %-8s                           |\n",
-           global_state.rpm_zone);
-    printf("|  TEMP    : %5.1f C   STATE : %-8s         |\n",
-           global_state.engine_temp, global_state.temp_zone);
+       char total_time[9], current_time[9];
+       format_time(global_state.total_elapsed_sec, total_time);
+       format_time(global_state.current_elapsed_sec, current_time);
 
-    printf("+----------------------------------------------+\n");
+       int bar_width = content_width / 3;
 
-    // Motion
-    printf("|  SPEED   : %5.1f MPH %s     |\n",
-           global_state.speed, speed_bar);
-    printf("|  TOTAL   : %010.1f mi                    |\n",
-           global_state.total_distance);
-    printf("|  TRIP    : %010.1f mi                    |\n",
-           global_state.trip_distance);
+       char rpm_bar[256], speed_bar[256], fuel_bar[256], battery_bar[256];
 
-    printf("+----------------------------------------------+\n");
+       format_bar(global_state.rpm, RPM_MAX, bar_width, rpm_bar);
+       format_bar(global_state.speed, SPEED_MAX, bar_width, speed_bar);
+       format_bar(global_state.fuel_level, FUEL_MAX, bar_width, fuel_bar);
+       format_bar(global_state.battery_level, 100.0f, bar_width, battery_bar);
 
-    // Fuel
-    printf("|  FUEL    : %4.2f gal %s       |\n",
-           global_state.fuel_level, fuel_bar);
-    printf("|  STATUS  : %-10s                        |\n",
-           global_state.fuel_status);
+       print_top(width);
 
-    printf("+----------------------------------------------+\n");
+       printf("\033[H");
 
-    // Hybrid
-    printf("|  BATTERY : %5.1f%% %s        |\n",
-           global_state.battery_level, battery_bar);
-    printf("|  MODE    : %-10s                        |\n",
-           global_state.hybrid_mode);
-    printf("|  ASSIST  : %-3s      CHARGING : %-3s          |\n",
-           global_state.assist_active ? "ON " : "OFF",
-           global_state.charging_active ? "ON " : "OFF");
+       // Title
+       char title[512];
+       snprintf(title, sizeof(title), "MOTORCYCLE DASHBOARD OS");
+       print_row(width, title);
 
-    printf("+----------------------------------------------+\n");
+       print_mid(width);
 
-    // Signals & Lights
-    printf("|  LEFT : %-2s   RIGHT : %-2s   HAZARD : %-3s     |\n",
-           global_state.left_signal ? "<<" : "  ",
-           global_state.right_signal ? ">>" : "  ",
-           global_state.hazard ? "ON " : "OFF");
-    printf("|  HEADLIGHT : %-3s                             |\n",
-           global_state.headlight ? "ON " : "OFF");
+       // ENGINE
+       char engine[512];
+       snprintf(engine, sizeof(engine),
+                "ENGINE: %s   RPM: %d %s",
+                global_state.engine_on ? "ON" : "OFF",
+                global_state.rpm,
+                rpm_bar);
+       print_row(width, engine);
 
-    printf("+----------------------------------------------+\n");
+       char temp[512];
+       snprintf(temp, sizeof(temp),
+                "TEMP: %.1f C   ZONE: %s",
+                global_state.engine_temp,
+                global_state.temp_zone);
+       print_row(width, temp);
 
-    // Timers
-    printf("|  TOTAL TIME   : %-8s                     |\n", total_time);
-    printf("|  CURRENT TIME : %-8s                     |\n", current_time);
+       print_mid(width);
 
-    printf("+----------------------------------------------+\n");
+       // MOTION
+       char speed[512];
+       snprintf(speed, sizeof(speed),
+                "SPEED: %.1f MPH %s",
+                global_state.speed,
+                speed_bar);
+       print_row(width, speed);
 
-    // Last 4 events from circular buffer
-    printf("|  RECENT EVENTS:                              |\n");
-    int total = global_state.event_count;
-    int count = total < 4 ? total : 4;
-    for (int i = count - 1; i >= 0; i--)
-    {
-        int index = (total - 1 - i) % MAX_EVENTS;
-        printf("|  [%05d] %-36s|\n",
-               global_state.event_log[index].elapsed_seconds,
-               global_state.event_log[index].description);
-    }
-    for (int i = count; i < 4; i++)
-    {
-        printf("|  [-----] %-36s|\n", "");
-    }
+       char distance[512];
+       snprintf(distance, sizeof(distance),
+                "TOTAL: %.1f mi   TRIP: %.1f mi",
+                global_state.total_distance,
+                global_state.trip_distance);
+       print_row(width, distance);
 
-    printf("+----------------------------------------------+\n");
+       print_mid(width);
+
+       // FUEL
+       char fuel[512];
+       snprintf(fuel, sizeof(fuel),
+                "FUEL: %.2f gal %s   STATUS: %s",
+                global_state.fuel_level,
+                fuel_bar,
+                global_state.fuel_status);
+       print_row(width, fuel);
+
+       print_mid(width);
+
+       // BATTERY
+       char battery[512];
+       snprintf(battery, sizeof(battery),
+                "BATTERY: %.1f%% %s   MODE: %s",
+                global_state.battery_level,
+                battery_bar,
+                global_state.hybrid_mode);
+       print_row(width, battery);
+
+       char hybrid[512];
+       snprintf(hybrid, sizeof(hybrid),
+                "ASSIST: %s   CHARGING: %s",
+                global_state.assist_active ? "ON" : "OFF",
+                global_state.charging_active ? "ON" : "OFF");
+       print_row(width, hybrid);
+
+       print_mid(width);
+
+       // SIGNALS
+       char signals[512];
+       snprintf(signals, sizeof(signals),
+                "LEFT: %s   RIGHT: %s   HAZARD: %s   HEADLIGHT: %s",
+                global_state.left_signal ? "<<" : "--",
+                global_state.right_signal ? ">>" : "--",
+                global_state.hazard ? "ON" : "OFF",
+                global_state.headlight ? "ON" : "OFF");
+       print_row(width, signals);
+
+       print_mid(width);
+
+       // TIME
+       char timebuf[512];
+       snprintf(timebuf, sizeof(timebuf),
+                "TOTAL TIME: %s   CURRENT TIME: %s",
+                total_time, current_time);
+       print_row(width, timebuf);
+
+       print_mid(width);
+
+       // EVENTS
+       print_row(width, "RECENT EVENTS:");
+
+       int total = global_state.event_count;
+       int count = total < 4 ? total : 4;
+
+       for (int i = count - 1; i >= 0; i--)
+       {
+              int index = (total - 1 - i) % MAX_EVENTS;
+
+              char event[512];
+              snprintf(event, sizeof(event),
+                       "[%05d] %s",
+                       global_state.event_log[index].elapsed_seconds,
+                       global_state.event_log[index].description);
+
+              print_row(width, event);
+       }
+
+       for (int i = count; i < 4; i++)
+              print_row(width, "[-----]");
+
+       print_bottom(width);
 }
 
 void *dashboard_thread(void *arg)
 {
-    while (1)
-    {
+// Clear screen once at startup
 #ifdef _WIN32
-        system("cls");
+       system("cls");
 #else
-        system("clear");
+       system("clear");
 #endif
 
-        print_dashboard();
-        fflush(stdout);
+       while (1)
+       {
+// Clear screen at the beginning of each iteration
+#ifdef _WIN32
+              system("cls"); // Windows clear
+#else
+              system("clear"); // Unix/Linux clear
+#endif
 
-        global_state.total_elapsed_sec++;
-        global_state.current_elapsed_sec++;
+              print_dashboard();
+              fflush(stdout);
 
-        sleep(1);
-    }
-    return NULL;
+              // Increment the time counters
+              global_state.total_elapsed_sec++;
+              global_state.current_elapsed_sec++;
+
+              sleep(1);
+       }
+
+       return NULL;
 }
