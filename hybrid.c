@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "state.h"
-
+#include "string.h"
 void *hybrid_thread(void *arg) {
     float previous_speed = 0.0f;
 
