@@ -2,6 +2,10 @@
 #include <unistd.h>
 #include "state.h"
 #include "string.h"
+
+//This thread is looking at the speed and RPM and 
+//deciding if the motocycle should use electric power 
+//or assist the engine or charge the battery.
 void *hybrid_thread(void *arg) {
 
     //Stored the previous speed to detect acceleration vs. deceleration

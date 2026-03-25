@@ -3,6 +3,7 @@
 #include "state.h"
 #include <string.h>
 
+//Thread is looking at the RPM, temperature, and fuel and deciding what state they are in 
 void *ecu_thread(void *arg) {
     while (1) {
     
