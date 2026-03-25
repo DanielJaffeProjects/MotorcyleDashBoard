@@ -47,12 +47,7 @@ void *ecu_thread(void *arg) {
         strcpy(global_state.fuel_status, "OK");
        }
 
-       if (global_state.engine_on == 0) {
-        global_state.rpm = 0;
-        global_state.speed = 0.0f;
-       }
-
-       usleep(100000);
+       sleep(1);
 
     }
     return NULL;
