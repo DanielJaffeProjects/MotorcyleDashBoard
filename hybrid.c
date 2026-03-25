@@ -3,51 +3,67 @@
 #include "state.h"
 #include "string.h"
 void *hybrid_thread(void *arg) {
+
+    //Stored the previous speed to detect acceleration vs. deceleration
     float previous_speed = 0.0f;
 
+    //Initializing the battery if not set already 
     if (global_state.battery_level <= 0.0f) {
         global_state.battery_level = 100.0f;
     }
 
     while (1) {
+        //Reseting the hybrid system values each loop
         global_state.assist_active = 0;
         global_state.charging_active = 0;
         strcpy(global_state.hybrid_mode, "IDLE");
 
+        //If the engine is off, the hybrid system does nothing 
         if (global_state.engine_on == 0) {
             previous_speed = global_state.speed;
-            usleep(100000);
+            sleep(1);
             continue;
         }
 
+        //If the speed is decreasing, the motorcycle is slowing down
+        //This energy is converted into battery charge 
         if (global_state.speed < previous_speed && global_state.speed > 0.0f) {
             global_state.charging_active = 1;
             strcpy(global_state.hybrid_mode, "CHARGING");
-            global_state.battery_level += 0.3f;
+            global_state.battery_level += 1.0f;
         }
 
+        //At low speeds, the motorcycle will use electric power
         else if (global_state.speed > 0.0f &&
                  global_state.speed <= 20.0f &&
                  global_state.battery_level > 20.0f) {
                     global_state.assist_active = 1;
                     strcpy(global_state.hybrid_mode, "ELECTRIC");
-                    global_state.battery_level -= 0.2f;
+                    global_state.battery_level -= 0.5f;
                 }
-        else if ((global_state.speed > 20.0f || global_state.rpm > 5000) &&
+
+        //When accelerating or RPM is high, electric will assist the engine 
+        else if ((global_state.speed > previous_speed || global_state.rpm > 5000) &&
                   global_state.battery_level > 20.0f) {
                     global_state.assist_active = 1;
                     strcpy(global_state.hybrid_mode, "ASSIST");
-                    global_state.battery_level -= 0.4f;
+
+                    //Draining the battery faster 
+                    global_state.battery_level -= 1.0f;
                 }
+
+        //Having the battery level stay between 0% and 100%
         if (global_state.battery_level > 100.0f) {
             global_state.battery_level = 100.0f;
         }
-        else if (global_state.battery_level < 0.0f) {
+        if (global_state.battery_level < 0.0f) {
             global_state.battery_level = 0.0f;
         }
-
+        //Saving the current speed for next loop comparison
         previous_speed = global_state.speed;
-        usleep(100000);
+
+        //Running at the same pase as the motion thread
+        sleep(1);
     }
     return NULL;
 }
