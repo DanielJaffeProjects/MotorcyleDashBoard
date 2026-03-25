@@ -1,3 +1,18 @@
+/////////////////////////////////////////////////
+// Group Members: Khalil Smith, Daniel Jaffe, Hien Tran
+// Date: 03/24/2026
+// Course: CSC 220 Operating Systems and Systems Programming
+// Project: Motorcycle System Simulation - Phase I
+// Description: This project simulates a motorcycle system using 
+// multiple threads, where each subsystem (engine, motion, fuel, ECU, and hybrid assist) 
+// runs independently but shares a common system state. The simulation models real-time 
+// behavior like RPM changes, speed, temperature, fuel usage, and battery activity, while 
+// the ECU and hybrid threads interpret and manage the system to produce meaningful outputs 
+// displayed on a dashboard. 
+/////////////////////////////////////////////////
+
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "state.h"
