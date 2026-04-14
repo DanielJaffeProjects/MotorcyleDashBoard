@@ -51,9 +51,14 @@ typedef struct {
     int total_elapsed_sec;
     int current_elapsed_sec;
 
+    LogEntry event_log[MAX_EVENTS];
+    int event_count;
+
 } SystemState;
 
 extern SystemState global_state;
+
+extern pthread_mutex_t queue_lock;
 
 // Mutex Locks
 extern pthread_mutex_t engine_lock;
@@ -90,8 +95,10 @@ typedef struct {
     int count;
 } EventQueue;
 
+
 extern EventQueue event_queue;
 
+void enqueue_event(const char *desc);
 extern pthread_cond_t queue_not_empty;
 extern pthread_cond_t queue_not_full;
 

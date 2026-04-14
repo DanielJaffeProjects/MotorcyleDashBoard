@@ -1,3 +1,98 @@
+// #include <stdio.h>
+// #include <unistd.h>
+// #include <string.h>
+// #include "state.h"
+
+// // Hybrid sync
+// pthread_mutex_t hybrid_lock = PTHREAD_MUTEX_INITIALIZER;
+// pthread_cond_t speed_change_cond = PTHREAD_COND_INITIALIZER;
+
+// void *hybrid_thread(void *arg)
+// {
+//     (void)arg;
+
+//     float previous_speed = -1.0f;
+//     char prev_mode[32] = "IDLE";
+
+//     pthread_mutex_lock(&hybrid_lock);
+//     if (global_state.battery_level <= 0.0f) {
+//         global_state.battery_level = 100.0f;
+//     }
+//     pthread_mutex_unlock(&hybrid_lock);
+
+//     while (1) {
+
+//         pthread_mutex_lock(&motion_lock);
+
+//         while (global_state.speed == previous_speed) {
+//             pthread_cond_wait(&speed_change_cond, &motion_lock);
+//         }
+
+//         float speed = global_state.speed;
+//         pthread_mutex_unlock(&motion_lock);
+
+//         pthread_mutex_lock(&engine_lock);
+//         int engine_on = global_state.engine_on;
+//         int rpm = global_state.rpm;
+//         pthread_mutex_unlock(&engine_lock);
+
+//         pthread_mutex_lock(&hybrid_lock);
+
+//         float battery = global_state.battery_level;
+
+//         global_state.assist_active = 0;
+//         global_state.charging_active = 0;
+//         strcpy(global_state.hybrid_mode, "IDLE");
+
+//         if (!engine_on) {
+//             strcpy(global_state.hybrid_mode, "IDLE");
+//         }
+//         else if (battery <= BATTERY_LOW_THRESHOLD) {
+//             strcpy(global_state.hybrid_mode, "INACTIVE");
+//         }
+//         else if (speed < previous_speed && speed > 0) {
+//             global_state.charging_active = 1;
+//             strcpy(global_state.hybrid_mode, "CHARGING");
+//             global_state.battery_level += 1.0f;
+//         }
+//         else if (speed > 0 && speed <= 20) {
+//             global_state.assist_active = 1;
+//             strcpy(global_state.hybrid_mode, "ELECTRIC");
+//             global_state.battery_level -= 0.5f;
+//         }
+//         else if (speed > previous_speed || rpm > 5000) {
+//             global_state.assist_active = 1;
+//             strcpy(global_state.hybrid_mode, "ASSIST");
+//             global_state.battery_level -= 1.0f;
+//         }
+
+//         if (global_state.battery_level > 100.0f)
+//             global_state.battery_level = 100.0f;
+
+//         if (global_state.battery_level < 0.0f)
+//             global_state.battery_level = 0.0f;
+
+//         char current_mode[32];
+//         strcpy(current_mode, global_state.hybrid_mode);
+
+//         pthread_mutex_unlock(&hybrid_lock);
+
+//         // Log hybrid mode change
+//         if (strcmp(prev_mode, current_mode) != 0) {
+//             char msg[128];
+//             snprintf(msg, sizeof(msg), "Hybrid mode -> %s", current_mode);
+//             enqueue_event(msg);
+//             strcpy(prev_mode, current_mode);
+//         }
+
+//         previous_speed = speed;
+//     }
+
+//     return NULL;
+// }
+
+
+
 #include <stdio.h>
 #include <unistd.h>
 #include "state.h"
