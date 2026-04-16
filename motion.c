@@ -5,7 +5,7 @@
 void get_speed() {
     // if accelerating, speed goes up twice as fast
     // also speed must be below 121
-    if (global_state.accel_mode == 'A' && global_state.speed <121) {
+    if (global_state.accel_mode == 'A' && global_state.speed <120) {
         global_state.speed+=2;
         // add both trip distance and total distance
         global_state.trip_distance+=global_state.speed/3600;

@@ -93,7 +93,7 @@ void print_row(int width, const char *text)
 }
 
 // Printing the Actual Dashboard
-void print_dashboard(void)
+void print_dashboard(SystemState snap)
 {
        int width = get_terminal_width();
 
@@ -108,18 +108,20 @@ void print_dashboard(void)
 
        int content_width = width - 4;
 
+       printf("\033[H");
+
        char total_time[9], current_time[9];
-       format_time(global_state.total_elapsed_sec, total_time);
-       format_time(global_state.current_elapsed_sec, current_time);
+       format_time(snap.total_elapsed_sec, total_time);
+       format_time(snap.current_elapsed_sec, current_time);
 
        int bar_width = content_width / 3;
 
        char rpm_bar[256], speed_bar[256], fuel_bar[256], battery_bar[256];
 
-       format_bar(global_state.rpm, RPM_MAX, bar_width, rpm_bar);
-       format_bar(global_state.speed, SPEED_MAX, bar_width, speed_bar);
-       format_bar(global_state.fuel_level, FUEL_MAX, bar_width, fuel_bar);
-       format_bar(global_state.battery_level, 100.0f, bar_width, battery_bar);
+       format_bar(snap.rpm, RPM_MAX, bar_width, rpm_bar);
+       format_bar(snap.speed, SPEED_MAX, bar_width, speed_bar);
+       format_bar(snap.fuel_level, FUEL_MAX, bar_width, fuel_bar);
+       format_bar(snap.battery_level, 100.0f, bar_width, battery_bar);
 
        print_top(width);
 
@@ -136,16 +138,16 @@ void print_dashboard(void)
        char engine[512];
        snprintf(engine, sizeof(engine),
                 "ENGINE: %s   RPM: %d %s",
-                global_state.engine_on ? "ON" : "OFF",
-                global_state.rpm,
+                snap.engine_on ? "ON" : "OFF",
+                snap.rpm,
                 rpm_bar);
        print_row(width, engine);
 
        char temp[512];
        snprintf(temp, sizeof(temp),
                 "TEMP: %.1f C   ZONE: %s",
-                global_state.engine_temp,
-                global_state.temp_zone);
+                snap.engine_temp,
+                snap.temp_zone);
        print_row(width, temp);
 
        print_mid(width);
@@ -154,15 +156,15 @@ void print_dashboard(void)
        char speed[512];
        snprintf(speed, sizeof(speed),
                 "SPEED: %.1f MPH %s",
-                global_state.speed,
+                snap.speed,
                 speed_bar);
        print_row(width, speed);
 
        char distance[512];
        snprintf(distance, sizeof(distance),
                 "TOTAL: %.1f mi   TRIP: %.1f mi",
-                global_state.total_distance,
-                global_state.trip_distance);
+                snap.total_distance,
+                snap.trip_distance);
        print_row(width, distance);
 
        print_mid(width);
@@ -171,9 +173,9 @@ void print_dashboard(void)
        char fuel[512];
        snprintf(fuel, sizeof(fuel),
                 "FUEL: %.2f gal %s   STATUS: %s",
-                global_state.fuel_level,
+                snap.fuel_level,
                 fuel_bar,
-                global_state.fuel_status);
+                snap.fuel_status);
        print_row(width, fuel);
 
        print_mid(width);
@@ -182,16 +184,16 @@ void print_dashboard(void)
        char battery[512];
        snprintf(battery, sizeof(battery),
                 "BATTERY: %.1f%% %s   MODE: %s",
-                global_state.battery_level,
+                snap.battery_level,
                 battery_bar,
-                global_state.hybrid_mode);
+                snap.hybrid_mode);
        print_row(width, battery);
 
        char hybrid[512];
        snprintf(hybrid, sizeof(hybrid),
                 "ASSIST: %s   CHARGING: %s",
-                global_state.assist_active ? "ON" : "OFF",
-                global_state.charging_active ? "ON" : "OFF");
+                snap.assist_active ? "ON" : "OFF",
+                snap.charging_active ? "ON" : "OFF");
        print_row(width, hybrid);
 
        print_mid(width);
@@ -200,10 +202,10 @@ void print_dashboard(void)
        char signals[512];
        snprintf(signals, sizeof(signals),
                 "LEFT: %s   RIGHT: %s   HAZARD: %s   HEADLIGHT: %s",
-                global_state.left_signal ? "<<" : "--",
-                global_state.right_signal ? ">>" : "--",
-                global_state.hazard ? "ON" : "OFF",
-                global_state.headlight ? "ON" : "OFF");
+                snap.left_signal ? "<<" : "--",
+                snap.right_signal ? ">>" : "--",
+                snap.hazard ? "ON" : "OFF",
+                snap.headlight ? "ON" : "OFF");
        print_row(width, signals);
 
        print_mid(width);
@@ -220,7 +222,7 @@ void print_dashboard(void)
        // EVENTS
        print_row(width, "RECENT EVENTS:");
 
-       int total = global_state.event_count;
+       int total = snap.event_count;
        int count = total < 4 ? total : 4;
 
        for (int i = count - 1; i >= 0; i--)
@@ -230,8 +232,8 @@ void print_dashboard(void)
               char event[512];
               snprintf(event, sizeof(event),
                        "[%05d] %s",
-                       global_state.event_log[index].elapsed_seconds,
-                       global_state.event_log[index].description);
+                       snap.event_log[index].elapsed_seconds,
+                       snap.event_log[index].description);
 
               print_row(width, event);
        }
@@ -242,31 +244,45 @@ void print_dashboard(void)
        print_bottom(width);
 }
 
-void *dashboard_thread(void *arg)
-{
-// Clear screen once at startup
+void *dashboard_thread(void *arg){
 #ifdef _WIN32
        system("cls");
 #else
        system("clear");
 #endif
-
-       while (1)
-       {
-// Clear screen at the beginning of each iteration
+       while (1){
 #ifdef _WIN32
-              system("cls"); // Windows clear
+              system("cls");
 #else
-              system("clear"); // Unix/Linux clear
+              system("clear");
 #endif
+              // lock everything so that dashboard can get everything without things changing
+              pthread_mutex_lock(&engine_lock);
+              pthread_mutex_lock(&motion_lock);
+              pthread_mutex_lock(&fuel_lock);
+              pthread_mutex_lock(&hybrid_lock);
+              pthread_mutex_lock(&ecu_lock);
+              pthread_mutex_lock(&signal_lock);
+              pthread_mutex_lock(&log_lock);
 
-              print_dashboard();
-              fflush(stdout);
-
+              // take a copy of what global state is at this point
+              SystemState snap = global_state;
               // Increment the time counters
               global_state.total_elapsed_sec++;
               global_state.current_elapsed_sec++;
 
+              //unlocks all the parts to continue
+              pthread_mutex_unlock(&log_lock);
+              pthread_mutex_unlock(&signal_lock);
+              pthread_mutex_unlock(&ecu_lock);
+              pthread_mutex_unlock(&hybrid_lock);
+              pthread_mutex_unlock(&fuel_lock);
+              pthread_mutex_unlock(&motion_lock);
+              pthread_mutex_unlock(&engine_lock);
+
+              // print the output of the dashboard
+              print_dashboard(snap);
+              fflush(stdout);
               sleep(1);
        }
 
