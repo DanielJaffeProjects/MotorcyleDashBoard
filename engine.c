@@ -57,7 +57,11 @@ void *engine_thread(void *arg) {
         update_RPM();
         update_Temp();
          // let everyone know that engine is on
-        pthread_cond_broadcast(&engine_on_cond);
+         if (global_state.engine_on) {
+             pthread_cond_broadcast(&engine_on_cond);
+         }
+        // wakes up the ecu
+        pthread_cond_signal(&ecu_cond);
         pthread_mutex_unlock(&engine_lock);
 
         sleep(1);

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 void get_speed() {
     // if accelerating, speed goes up twice as fast
-    // also speed must be below 121
+    // also speed must be 121 or below
     if (global_state.accel_mode == 'A' && global_state.speed <120) {
         global_state.speed+=2;
         // add both trip distance and total distance
@@ -45,6 +45,7 @@ void *motion_thread(void *arg) {
 
         pthread_mutex_lock(&motion_lock);
         get_speed();
+        pthread_cond_broadcast(&speed_change_cond);
         pthread_mutex_unlock(&motion_lock);
         sleep(1);
     }
