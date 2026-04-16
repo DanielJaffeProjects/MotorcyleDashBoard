@@ -3,15 +3,6 @@
 #include <string.h>
 #include "state.h"
 
-// Queue definitions
-EventQueue event_queue = {0};
-
-pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t queue_not_empty = PTHREAD_COND_INITIALIZER;
-pthread_cond_t queue_not_full  = PTHREAD_COND_INITIALIZER;
-
-// Log buffer lock
-pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // Producer function
 void enqueue_event(const char *desc)
