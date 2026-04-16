@@ -22,16 +22,32 @@ void getFuel() {
                 global_state.fuel_level-=0.005;
             }
         }
-        else {
-            global_state.engine_on=0;
-        }
+
+    }
+    if (global_state.fuel_level<= 0.0f) {
+        // stops fuel level from going negative
+        global_state.fuel_level=0.0f;
+
+        // lock down engine when fuel is 0 and turn it off
+        pthread_mutex_lock(&engine_lock);
+        global_state.engine_on = 0;
+        pthread_mutex_unlock(&engine_lock);
     }
 
 }
 void *fuel_thread(void *arg) {
 
     while (1) {
+        pthread_mutex_lock(&engine_lock);
+        while (global_state.engine_on==0) {
+            pthread_cond_wait(&engine_on_cond, &engine_lock);
+        }
+        pthread_mutex_unlock(&engine_lock);
+
+        pthread_mutex_lock(&fuel_lock);
         getFuel();
+        pthread_mutex_unlock(&fuel_lock);
+
         sleep(1);
     }
     return NULL;

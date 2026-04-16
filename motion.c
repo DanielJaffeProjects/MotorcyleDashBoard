@@ -39,7 +39,6 @@ void *motion_thread(void *arg) {
         // wait for the engine to be on and not locked to start calculating speed
         pthread_mutex_lock(&engine_lock);
         while (global_state.engine_on==0) {
-            printf("WAITING ON ENGINE");
             pthread_cond_wait(&engine_on_cond, &engine_lock);
         }
         pthread_mutex_unlock(&engine_lock);
