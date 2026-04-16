@@ -52,22 +52,13 @@ void update_Temp() {
 }
 
 void *engine_thread(void *arg) {
-    global_state.engine_on = 1;
-    global_state.rpm = 1100;
-    global_state.engine_temp = 40;
-
-    while (1) {
-        // if engine is 1 then it is on else it is off
-        // if (global_state.engine_on == 1) {
-        //     printf("ENGINE: ON \n");
-        // }
-        // else {
-        //     printf("ENGINE: OFF \n");
-        // }
+     while (1) {
+        pthread_mutex_lock(&engine_lock);
         update_RPM();
-        // printf("RPM: %d\n", global_state.rpm);
         update_Temp();
-        // printf("Temp: %f\n", global_state.engine_temp);
+         // let everyone know that engine is on
+        pthread_cond_broadcast(&engine_on_cond);
+        pthread_mutex_unlock(&engine_lock);
 
         sleep(1);
 
