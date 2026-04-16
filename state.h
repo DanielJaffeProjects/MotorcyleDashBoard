@@ -9,6 +9,23 @@
 #define RPM_MAX    16500
 #define SPEED_MAX  200
 
+// Temperature thresholds (Celsius)
+#define TEMP_COLD       60.0f
+#define TEMP_NORMAL     95.0f
+#define TEMP_HOT        105.0f
+#define TEMP_OVERHEAT   115.0f
+
+// RPM zone thresholds (as fractions of RPM_MAX)
+#define RPM_IDLE_MIN    ((int)(RPM_MAX * 0.07))   
+#define RPM_IDLE_MAX    ((int)(RPM_MAX * 0.09))   
+#define RPM_NORMAL_MAX  ((int)(RPM_MAX * 0.5))   
+#define RPM_HIGH_MAX    ((int)(RPM_MAX * 0.85))
+
+// ECU enforcement caps
+#define OVERHEAT_RPM_CAP    RPM_NORMAL_MAX
+#define OVERHEAT_SPEED_CAP  ((int)(SPEED_MAX * 0.4))
+#define LOW_FUEL_SPEED_CAP  60
+
 typedef struct {
     char description[128];
     int  elapsed_seconds;
@@ -47,6 +64,9 @@ typedef struct {
     int   hazard;
     int   headlight;
 
+    // Acceleration mode: 'A' = accelerating, 'D' = decelerating
+    char  accel_mode;
+
     // Timers
     int total_elapsed_sec;
     int current_elapsed_sec;
@@ -58,7 +78,6 @@ typedef struct {
 
 extern SystemState global_state;
 
-extern pthread_mutex_t queue_lock;
 
 // Mutex Locks
 extern pthread_mutex_t engine_lock;
@@ -68,13 +87,17 @@ extern pthread_mutex_t hybrid_lock;
 extern pthread_mutex_t ecu_lock;
 extern pthread_mutex_t signal_lock;
 extern pthread_mutex_t log_lock;
+extern pthread_mutex_t queue_lock;
 
 // Condition Variables for Coordination
-extern pthread_cond_t engine_on_cond;     // Motion/Fuel wait for engine ON
-extern pthread_cond_t speed_change_cond;  // Hybrid waits for speed changes
-extern pthread_cond_t fuel_cond;          // Fuel coordination
-extern pthread_cond_t hybrid_cond;        // Hybrid coordination
-extern pthread_cond_t ecu_cond;           // ECU reacts to system changes
+extern pthread_cond_t engine_on_cond;
+extern pthread_cond_t speed_change_cond;
+extern pthread_cond_t fuel_cond;
+extern pthread_cond_t hybrid_cond;
+extern pthread_cond_t ecu_cond;
+
+extern pthread_cond_t queue_not_empty;
+extern pthread_cond_t queue_not_full;
 
 // ECU System State
 typedef enum {
@@ -95,11 +118,8 @@ typedef struct {
     int count;
 } EventQueue;
 
-
 extern EventQueue event_queue;
 
 void enqueue_event(const char *desc);
-extern pthread_cond_t queue_not_empty;
-extern pthread_cond_t queue_not_full;
 
 #endif
