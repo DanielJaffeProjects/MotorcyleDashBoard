@@ -3,12 +3,12 @@
 // Date: 03/24/2026
 // Course: CSC 220 Operating Systems and Systems Programming
 // Project: Motorcycle System Simulation - Phase I
-// Description: This project simulates a motorcycle system using 
-// multiple threads, where each subsystem (engine, motion, fuel, ECU, and hybrid assist) 
-// runs independently but shares a common system state. The simulation models real-time 
-// behavior like RPM changes, speed, temperature, fuel usage, and battery activity, while 
-// the ECU and hybrid threads interpret and manage the system to produce meaningful outputs 
-// displayed on a dashboard. 
+// Description: This project simulates a motorcycle system using
+// multiple threads, where each subsystem (engine, motion, fuel, ECU, and hybrid assist)
+// runs independently but shares a common system state. The simulation models real-time
+// behavior like RPM changes, speed, temperature, fuel usage, and battery activity, while
+// the ECU and hybrid threads interpret and manage the system to produce meaningful outputs
+// displayed on a dashboard.
 /////////////////////////////////////////////////
 
 #include <stdio.h>
@@ -47,6 +47,7 @@ void *ecu_thread(void *arg);
 void *hybrid_thread(void *arg);
 void *event_logger_thread(void *arg);
 void *dashboard_thread(void *arg);
+void *input_thread(void *arg);
 
 // Initialize mutexes & condition variables
 void init_sync()
@@ -80,7 +81,7 @@ void destroy_sync()
     pthread_mutex_destroy(&signal_lock);
     pthread_mutex_destroy(&log_lock);
     pthread_mutex_destroy(&queue_lock);
- 
+
     pthread_cond_destroy(&engine_on_cond);
     pthread_cond_destroy(&speed_change_cond);
     pthread_cond_destroy(&fuel_cond);
@@ -97,7 +98,6 @@ void init_queue()
     event_queue.tail = 0;
     event_queue.count = 0;
 }
-
 
 void init_state(int argc, char *argv[])
 {
@@ -136,15 +136,18 @@ void init_state(int argc, char *argv[])
     global_state.current_elapsed_sec = 0;
 
     global_state.event_count = 0;
+
+    global_state.refueling = 0;
+    global_state.battery_mode = 0;
+    global_state.shutdown_flag = 0;
     memset(global_state.event_log, 0, sizeof(global_state.event_log));
 }
-
 
 int main(int argc, char *argv[])
 {
     if (argc < 6)
     {
-        printf("Usage: ./a.out <RPM> <ENGINE_STATE> <SPEED> <FUEL_LEVEL> <A/D> [BATTERY]\n");
+        printf("Usage: ./main.exe <RPM> <ENGINE_STATE> <SPEED> <FUEL_LEVEL> <A/D> [BATTERY]\n");
         return 1;
     }
     init_sync();
@@ -158,6 +161,7 @@ int main(int argc, char *argv[])
     pthread_t t_hybrid;
     pthread_t t_event_logger;
     pthread_t t_dashboard;
+    pthread_t t_input;
 
     pthread_create(&t_engine, NULL, engine_thread, NULL);
     pthread_create(&t_motion, NULL, motion_thread, argv[5]);
@@ -166,7 +170,7 @@ int main(int argc, char *argv[])
     pthread_create(&t_hybrid, NULL, hybrid_thread, NULL);
     pthread_create(&t_event_logger, NULL, event_logger_thread, NULL);
     pthread_create(&t_dashboard, NULL, dashboard_thread, NULL);
-
+    pthread_create(&t_input, NULL, input_thread, NULL);
 
     pthread_join(t_engine, NULL);
     pthread_join(t_motion, NULL);
@@ -175,6 +179,7 @@ int main(int argc, char *argv[])
     pthread_join(t_hybrid, NULL);
     pthread_join(t_event_logger, NULL);
     pthread_join(t_dashboard, NULL);
+    pthread_join(t_input, NULL);
 
     destroy_sync();
     printf("Hahaha");

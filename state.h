@@ -74,6 +74,10 @@ typedef struct {
     LogEntry event_log[MAX_EVENTS];
     int event_count;
 
+    int refueling;       // 1 = currently refueling, 0 = not
+    int battery_mode;    // 1 = B key ON (draining battery), 0 = OFF
+    int shutdown_flag;   // 1 = Q pressed, all threads should exit
+
 } SystemState;
 
 extern SystemState global_state;

@@ -244,13 +244,15 @@ void print_dashboard(SystemState snap)
        print_bottom(width);
 }
 
-void *dashboard_thread(void *arg){
+void *dashboard_thread(void *arg)
+{
 #ifdef _WIN32
        system("cls");
 #else
        system("clear");
 #endif
-       while (1){
+       while (1)
+       {
 #ifdef _WIN32
               system("cls");
 #else
@@ -268,10 +270,13 @@ void *dashboard_thread(void *arg){
               // take a copy of what global state is at this point
               SystemState snap = global_state;
               // Increment the time counters
-              global_state.total_elapsed_sec++;
+              if (global_state.engine_on){
+                     global_state.total_elapsed_sec++;
+              }
+
               global_state.current_elapsed_sec++;
 
-              //unlocks all the parts to continue
+              // unlocks all the parts to continue
               pthread_mutex_unlock(&log_lock);
               pthread_mutex_unlock(&signal_lock);
               pthread_mutex_unlock(&ecu_lock);
