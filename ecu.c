@@ -101,6 +101,7 @@ void *ecu_thread(void *arg)
                     enqueue_event("ECU: Engine OFF - RPM set to 0");
                }
 
+
                // Signal motion thread to begin gradual speed reduction
                pthread_cond_signal(&speed_change_cond);
           }

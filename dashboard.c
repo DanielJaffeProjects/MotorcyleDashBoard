@@ -272,9 +272,10 @@ void *dashboard_thread(void *arg)
               // Increment the time counters
               if (global_state.engine_on){
                      global_state.total_elapsed_sec++;
+                     global_state.current_elapsed_sec++;
+
               }
 
-              global_state.current_elapsed_sec++;
 
               // unlocks all the parts to continue
               pthread_mutex_unlock(&log_lock);

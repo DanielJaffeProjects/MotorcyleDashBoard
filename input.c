@@ -178,7 +178,6 @@ static void handle_K()
 {
     pthread_mutex_lock(&engine_lock);
     pthread_mutex_lock(&motion_lock);
-
     if (global_state.engine_on == 1)
     {
         global_state.engine_on           = 0;
@@ -189,7 +188,6 @@ static void handle_K()
         global_state.trip_distance       = 0.0f;
         enqueue_event("Kill switch - Engine OFF");
     }
-
     pthread_mutex_unlock(&motion_lock);
     pthread_mutex_unlock(&engine_lock);
 }

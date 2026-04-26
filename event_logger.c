@@ -11,6 +11,7 @@ void enqueue_event(const char *desc)
 
     strncpy(entry.description, desc, sizeof(entry.description) - 1);
     entry.description[sizeof(entry.description) - 1] = '\0';
+
     entry.elapsed_seconds = global_state.current_elapsed_sec;
 
     pthread_mutex_lock(&queue_lock);

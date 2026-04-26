@@ -101,7 +101,6 @@
 // or assist the engine or charge the battery.
 void *hybrid_thread(void *arg)
 {
-
     // Stored the previous speed to detect acceleration vs. deceleration
     float previous_speed = 0.0f;
 
