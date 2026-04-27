@@ -223,11 +223,16 @@ static void handle_B()
     pthread_mutex_lock(&hybrid_lock);
     global_state.battery_mode = !global_state.battery_mode;
 
-    if (global_state.battery_mode)
+    if (global_state.battery_mode) {
         enqueue_event("Battery mode ON - running on electric");
-    else
-        enqueue_event("Battery mode OFF");
+        enqueue_event("DR.K do you see this top secret message");
 
+
+    }
+
+    else {
+        enqueue_event("Battery mode OFF");
+    }
     pthread_mutex_unlock(&hybrid_lock);
 }
 
