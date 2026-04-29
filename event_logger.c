@@ -33,13 +33,18 @@ void *event_logger_thread(void *arg)
 {
     (void)arg;
 
-    while (1) {
+    while (global_state.shutdown_flag == 0) {
         LogEntry entry;
 
         pthread_mutex_lock(&queue_lock);
 
-        while (event_queue.count == 0) {
+        while (event_queue.count == 0 && global_state.shutdown_flag == 0) {
             pthread_cond_wait(&queue_not_empty, &queue_lock);
+        }
+
+        if (event_queue.count == 0 && global_state.shutdown_flag == 1) {
+            pthread_mutex_unlock(&queue_lock);
+            break;
         }
 
         entry = event_queue.buffer[event_queue.head];

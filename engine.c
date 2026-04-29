@@ -52,7 +52,7 @@ void update_Temp() {
 }
 
 void *engine_thread(void *arg) {
-     while (1) {
+     while (global_state.shutdown_flag == 0) {
         pthread_mutex_lock(&engine_lock);
         update_RPM();
         update_Temp();

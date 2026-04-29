@@ -35,16 +35,25 @@ void get_speed() {
 
 
 void *motion_thread(void *arg) {
-    while (1) {
+    while (global_state.shutdown_flag == 0) {
         // wait for the engine to be on and not locked to start calculating speed
         pthread_mutex_lock(&engine_lock);
-        while (global_state.engine_on==0) {
+        while (global_state.engine_on == 0 && global_state.shutdown_flag == 0) {
             pthread_cond_wait(&engine_on_cond, &engine_lock);
         }
         pthread_mutex_unlock(&engine_lock);
+        
+        if (global_state.shutdown_flag) {
+            break;
+        }
 
         pthread_mutex_lock(&motion_lock);
+
         get_speed();
+
+        global_state.total_elapsed_sec++;
+        global_state.current_elapsed_sec++;
+
         pthread_cond_broadcast(&speed_change_cond);
         pthread_mutex_unlock(&motion_lock);
         sleep(1);

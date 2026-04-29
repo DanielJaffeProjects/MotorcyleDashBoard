@@ -108,7 +108,7 @@ void print_dashboard(SystemState snap)
 
        int content_width = width - 4;
 
-       printf("\033[H");
+       //printf("\033[H");
 
        char total_time[9], current_time[9];
        format_time(snap.total_elapsed_sec, total_time);
@@ -125,7 +125,7 @@ void print_dashboard(SystemState snap)
 
        print_top(width);
 
-       printf("\033[H");
+       //printf("\033[H");
 
        // Title
        char title[512];
@@ -249,15 +249,13 @@ void *dashboard_thread(void *arg)
 #ifdef _WIN32
        system("cls");
 #else
-       system("clear");
+       printf("\033[2J");
+       printf("\033[?25l");
 #endif
-       while (1)
+
+       while (global_state.shutdown_flag == 0)
        {
-#ifdef _WIN32
-              system("cls");
-#else
-              system("clear");
-#endif
+              printf("\033[H\033[J");
               // lock everything so that dashboard can get everything without things changing
               pthread_mutex_lock(&engine_lock);
               pthread_mutex_lock(&motion_lock);
@@ -270,11 +268,11 @@ void *dashboard_thread(void *arg)
               // take a copy of what global state is at this point
               SystemState snap = global_state;
               // Increment the time counters
-              if (global_state.engine_on){
-                     global_state.total_elapsed_sec++;
-                     global_state.current_elapsed_sec++;
+              // if (global_state.engine_on){
+              //        global_state.total_elapsed_sec++;
+              //        global_state.current_elapsed_sec++;
 
-              }
+              // }
 
 
               // unlocks all the parts to continue
@@ -291,6 +289,10 @@ void *dashboard_thread(void *arg)
               fflush(stdout);
               sleep(1);
        }
+
+       printf("\033[0m");
+       printf("\033[?25h");
+       fflush(stdout);
 
        return NULL;
 }

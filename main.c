@@ -182,6 +182,6 @@ int main(int argc, char *argv[])
     pthread_join(t_input, NULL);
 
     destroy_sync();
-    printf("Hahaha");
+    printf("\nSystem shutdown complete.\n");
     return 0;
 }

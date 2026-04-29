@@ -12,6 +12,7 @@
     #include <termios.h>
     #include <fcntl.h>
     static struct termios original_termios;
+    static int original_flags;
 #endif
 
 #define ACCEL_RATE      0.3f   // higher = snappier acceleration
@@ -38,6 +39,9 @@ void enable_raw_mode()
     raw.c_cc[VTIME] = 0;
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+
+    original_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, original_flags | O_NONBLOCK);
 #endif
 }
 
@@ -46,6 +50,7 @@ void restore_terminal()
 #ifdef _WIN32
 #else
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios);
+    fcntl(STDIN_FILENO, F_SETFL, original_flags);
 #endif
 }
 
@@ -176,43 +181,82 @@ static void handle_F()
 // K - kill switch (engine ON -> OFF)
 static void handle_K()
 {
+    int did_kill = 0;
+
     pthread_mutex_lock(&engine_lock);
     pthread_mutex_lock(&motion_lock);
+
     if (global_state.engine_on == 1)
     {
-        global_state.engine_on           = 0;
-        global_state.rpm                 = 0;
-        global_state.speed               = 0.0f;
-        global_state.accel_mode          = 'C';
+        global_state.engine_on = 0;
+        global_state.rpm = 0;
+        global_state.speed = 0.0f;
+        global_state.accel_mode = 'C';
         global_state.current_elapsed_sec = 0;
-        global_state.trip_distance       = 0.0f;
-        enqueue_event("Kill switch - Engine OFF");
+        global_state.trip_distance = 0.0f;
+
+        did_kill = 1;
     }
+
     pthread_mutex_unlock(&motion_lock);
     pthread_mutex_unlock(&engine_lock);
+
+    if (did_kill)
+    {
+        enqueue_event("Kill switch - Engine OFF");
+        pthread_cond_broadcast(&engine_on_cond);
+    }
 }
+
 
 // I - ignition (engine OFF -> ON)
 static void handle_I()
 {
+    int did_start = 0;
+    int no_fuel = 0;
+    int refueling_now = 0;
+
     pthread_mutex_lock(&engine_lock);
+    pthread_mutex_lock(&fuel_lock);
 
-    if (global_state.engine_on == 0 && global_state.refueling == 0)
+    if (global_state.engine_on == 0)
     {
-        if (global_state.fuel_level <= 0.0f)
+        if (global_state.refueling == 1)
         {
-            pthread_mutex_unlock(&engine_lock);
-            enqueue_event("Ignition failed - no fuel");
-            return;
+            refueling_now = 1;
         }
+        else if (global_state.fuel_level <= 0.0f)
+        {
+            no_fuel = 1;
+        }
+        else
+        {
+            global_state.engine_on = 1;
+            global_state.accel_mode = 'C';
+            did_start = 1;
+        }
+    }
 
-        global_state.engine_on  = 1;
-        global_state.accel_mode = 'C';
+    pthread_mutex_unlock(&fuel_lock);
+    pthread_mutex_unlock(&engine_lock);
+
+    if (did_start)
+    {
         enqueue_event("Ignition - Engine ON");
         pthread_cond_broadcast(&engine_on_cond);
     }
-
-    pthread_mutex_unlock(&engine_lock);
+    else if (no_fuel)
+    {
+        enqueue_event("Ignition failed - no fuel");
+    }
+    else if (refueling_now)
+    {
+        enqueue_event("Ignition failed - refueling");
+    }
+    else
+    {
+        enqueue_event("Ignition ignored - already ON");
+    }
 }
 
 // B - battery mode toggle
@@ -241,16 +285,16 @@ static void handle_Q()
 {
     enqueue_event("Shutdown requested");
 
+    pthread_mutex_lock(&engine_lock);
+    global_state.shutdown_flag = 1;
+    pthread_mutex_unlock(&engine_lock);
+
     // Wake up all waiting threads so they can check shutdown_flag and exit
     pthread_cond_broadcast(&engine_on_cond);
     pthread_cond_broadcast(&speed_change_cond);
     pthread_cond_broadcast(&ecu_cond);
     pthread_cond_broadcast(&queue_not_empty);
     pthread_cond_broadcast(&queue_not_full);
-
-    pthread_mutex_lock(&engine_lock);
-    global_state.shutdown_flag = 1;
-    pthread_mutex_unlock(&engine_lock);
 
     restore_terminal();
 }

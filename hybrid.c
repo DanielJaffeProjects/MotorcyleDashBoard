@@ -110,8 +110,12 @@ void *hybrid_thread(void *arg)
         global_state.battery_level = 100.0f;
     }
 
-    while (1)
+    while (global_state.shutdown_flag == 0)
     {
+        pthread_mutex_lock(&engine_lock);
+        pthread_mutex_lock(&motion_lock);
+        pthread_mutex_lock(&hybrid_lock);
+
         // Reseting the hybrid system values each loop
         global_state.assist_active = 0;
         global_state.charging_active = 0;
@@ -121,6 +125,11 @@ void *hybrid_thread(void *arg)
         if (global_state.engine_on == 0)
         {
             previous_speed = global_state.speed;
+
+            pthread_mutex_unlock(&hybrid_lock);
+            pthread_mutex_unlock(&motion_lock);
+            pthread_mutex_unlock(&engine_lock);
+            
             sleep(1);
             continue;
         }
@@ -181,6 +190,9 @@ void *hybrid_thread(void *arg)
             }
         }
 
+        pthread_mutex_unlock(&hybrid_lock);
+        pthread_mutex_unlock(&motion_lock);
+        pthread_mutex_unlock(&engine_lock);
         // Running at the same pase as the motion thread
         sleep(1);
     }

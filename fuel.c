@@ -13,13 +13,13 @@ void getFuel() {
     else {
         if (global_state.fuel_level>0) {
             if (global_state.rpm>8000) {
-                global_state.fuel_level-=2;
+                global_state.fuel_level-=0.02f;
             }
             else if (global_state.rpm>1300) {
-                global_state.fuel_level-=1;
+                global_state.fuel_level-=0.01f;
             }
             else {
-                global_state.fuel_level-=0.5;
+                global_state.fuel_level-=0.005f;
             }
         }
 
@@ -37,13 +37,18 @@ void getFuel() {
 }
 void *fuel_thread(void *arg) {
 
-    while (1) {
+    while (global_state.shutdown_flag == 0) {
         pthread_mutex_lock(&engine_lock);
         // if engine si off or battery is on don't use fuel
-        while (global_state.engine_on==0 || global_state.battery_mode) {
+        while ((global_state.engine_on == 0 || global_state.battery_mode) &&
+            global_state.shutdown_flag == 0) {
             pthread_cond_wait(&engine_on_cond, &engine_lock);
         }
         pthread_mutex_unlock(&engine_lock);
+
+        if (global_state.shutdown_flag) {
+            break;
+        }
 
         pthread_mutex_lock(&fuel_lock);
         getFuel();

@@ -1,17 +1,19 @@
 #include <stdio.h>
 #include <string.h>
 #include "state.h"
+#include <unistd.h>
 
 void *ecu_thread(void *arg)
 {
-     while (1)
+     while (global_state.shutdown_flag == 0)
      {
           // engine -> motion -> fuel -> ecu
 
           // Waiting for the signal
-          pthread_mutex_lock(&ecu_lock);
-          pthread_cond_wait(&ecu_cond, &ecu_lock);
-          pthread_mutex_unlock(&ecu_lock);
+          // pthread_mutex_lock(&ecu_lock);
+          // pthread_cond_wait(&ecu_cond, &ecu_lock);
+          // pthread_mutex_unlock(&ecu_lock);
+          sleep(1);
 
           // Locking
           pthread_mutex_lock(&engine_lock);
