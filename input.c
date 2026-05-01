@@ -6,20 +6,19 @@
 
 // cross platform support by Claude
 #ifdef _WIN32
-    #include <windows.h>
-    #include <conio.h>          // _kbhit(), _getch()
+#include <windows.h>
+#include <conio.h> // _kbhit(), _getch()
 #else
-    #include <termios.h>
-    #include <fcntl.h>
-    static struct termios original_termios;
-    static int original_flags;
+#include <termios.h>
+#include <fcntl.h>
+static struct termios original_termios;
+static int original_flags;
 #endif
 
-#define ACCEL_RATE      0.3f   // higher = snappier acceleration
-#define DECEL_RATE      15.0f  // lower than accel feel
-#define DT              1.0f   // delta-time in seconds
-#define REFUEL_SECONDS  10     // how long refueling takes
-
+#define ACCEL_RATE 0.3f   // higher = snappier acceleration
+#define DECEL_RATE 15.0f  // lower than accel feel
+#define DT 1.0f           // delta-time in seconds
+#define REFUEL_SECONDS 10 // how long refueling takes
 
 void enable_raw_mode()
 {
@@ -35,7 +34,7 @@ void enable_raw_mode()
     raw.c_lflag &= ~(ECHO | ICANON);
 
     // Non-blocking: return immediately even if no key pressed
-    raw.c_cc[VMIN]  = 0;
+    raw.c_cc[VMIN] = 0;
     raw.c_cc[VTIME] = 0;
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
@@ -59,7 +58,7 @@ static char read_key()
 {
 #ifdef _WIN32
     if (_kbhit())
-        return (char)_getch();   // returns immediately, no echo
+        return (char)_getch(); // returns immediately, no echo
     return 0;
 #else
     char c;
@@ -147,9 +146,9 @@ static void handle_H()
 static void handle_F()
 {
     pthread_mutex_lock(&engine_lock);
-    int can_refuel = (global_state.engine_on  == 0   &&
-                      global_state.speed      == 0.0f &&
-                      global_state.refueling  == 0);
+    int can_refuel = (global_state.engine_on == 0 &&
+                      global_state.speed == 0.0f &&
+                      global_state.refueling == 0);
     if (can_refuel)
         global_state.refueling = 1;
     pthread_mutex_unlock(&engine_lock);
@@ -207,7 +206,6 @@ static void handle_K()
         pthread_cond_broadcast(&engine_on_cond);
     }
 }
-
 
 // I - ignition (engine OFF -> ON)
 static void handle_I()
@@ -267,14 +265,14 @@ static void handle_B()
     pthread_mutex_lock(&hybrid_lock);
     global_state.battery_mode = !global_state.battery_mode;
 
-    if (global_state.battery_mode) {
+    if (global_state.battery_mode)
+    {
         enqueue_event("Battery mode ON - running on electric");
         enqueue_event("DR.K do you see this top secret message");
-
-
     }
 
-    else {
+    else
+    {
         enqueue_event("Battery mode OFF");
     }
     pthread_mutex_unlock(&hybrid_lock);
@@ -299,7 +297,6 @@ static void handle_Q()
     restore_terminal();
 }
 
-
 void *input_thread(void *arg)
 {
     (void)arg;
@@ -313,25 +310,62 @@ void *input_thread(void *arg)
         if (c == 0)
         {
             // No key pressed — sleep briefly
-            usleep(50000);  // 50 ms
+            usleep(50000); // 50 ms
             continue;
         }
 
         switch (c)
         {
-            case 'w': case 'W': handle_W(); break;
-            case 's': case 'S': handle_S(); break;
-            case 'c': case 'C': handle_C(); break;
-            case 'a': case 'A': handle_A(); break;
-            case 'd': case 'D': handle_D(); break;
-            case 'z': case 'Z': handle_Z(); break;
-            case 'h': case 'H': handle_H(); break;
-            case 'f': case 'F': handle_F(); break;
-            case 'k': case 'K': handle_K(); break;
-            case 'i': case 'I': handle_I(); break;
-            case 'b': case 'B': handle_B(); break;
-            case 'q': case 'Q': handle_Q(); break;
-            default: break;
+        case 'w':
+        case 'W':
+            handle_W();
+            break;
+        case 's':
+        case 'S':
+            handle_S();
+            break;
+        case 'c':
+        case 'C':
+            handle_C();
+            break;
+        case 'a':
+        case 'A':
+            handle_A();
+            break;
+        case 'd':
+        case 'D':
+            handle_D();
+            break;
+        case 'z':
+        case 'Z':
+            handle_Z();
+            break;
+        case 'h':
+        case 'H':
+            handle_H();
+            break;
+        case 'f':
+        case 'F':
+            handle_F();
+            break;
+        case 'k':
+        case 'K':
+            handle_K();
+            break;
+        case 'i':
+        case 'I':
+            handle_I();
+            break;
+        case 'b':
+        case 'B':
+            handle_B();
+            break;
+        case 'q':
+        case 'Q':
+            handle_Q();
+            break;
+        default:
+            break;
         }
     }
 

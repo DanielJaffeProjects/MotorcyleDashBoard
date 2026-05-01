@@ -101,7 +101,7 @@ void init_queue()
 
 void init_state(int argc, char *argv[])
 {
-    // ./a.out <RPM> <ENGINE_STATE> <SPEED> <FUEL_LEVEL> <A/D> <BATTERY_LEVEL>
+    // ./main.exe <RPM> <ENGINE_STATE> <SPEED> <FUEL_LEVEL> <A/D> <BATTERY_LEVEL>
 
     global_state.rpm = atoi(argv[1]);
     global_state.engine_on = atoi(argv[2]);
