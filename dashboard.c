@@ -108,7 +108,7 @@ void print_dashboard(SystemState snap)
 
        int content_width = width - 4;
 
-       //printf("\033[H");
+       // printf("\033[H");
 
        char total_time[9], current_time[9];
        format_time(snap.total_elapsed_sec, total_time);
@@ -125,7 +125,7 @@ void print_dashboard(SystemState snap)
 
        print_top(width);
 
-       //printf("\033[H");
+       // printf("\033[H");
 
        // Title
        char title[512];
@@ -249,14 +249,19 @@ void *dashboard_thread(void *arg)
 #ifdef _WIN32
        system("cls");
 #else
-       printf("\033[2J");
        printf("\033[?25l");
 #endif
 
        while (global_state.shutdown_flag == 0)
        {
-              printf("\033[H\033[J");
-              // lock everything so that dashboard can get everything without things changing
+
+#ifdef _WIN32
+              system("cls");
+#else
+              printf("\033[H\033[J"); // move to top AND clear from cursor down
+#endif
+              fflush(stdout);
+
               pthread_mutex_lock(&engine_lock);
               pthread_mutex_lock(&motion_lock);
               pthread_mutex_lock(&fuel_lock);
@@ -265,17 +270,8 @@ void *dashboard_thread(void *arg)
               pthread_mutex_lock(&signal_lock);
               pthread_mutex_lock(&log_lock);
 
-              // take a copy of what global state is at this point
               SystemState snap = global_state;
-              // Increment the time counters
-              // if (global_state.engine_on){
-              //        global_state.total_elapsed_sec++;
-              //        global_state.current_elapsed_sec++;
 
-              // }
-
-
-              // unlocks all the parts to continue
               pthread_mutex_unlock(&log_lock);
               pthread_mutex_unlock(&signal_lock);
               pthread_mutex_unlock(&ecu_lock);
@@ -284,7 +280,6 @@ void *dashboard_thread(void *arg)
               pthread_mutex_unlock(&motion_lock);
               pthread_mutex_unlock(&engine_lock);
 
-              // print the output of the dashboard
               print_dashboard(snap);
               fflush(stdout);
               sleep(1);
